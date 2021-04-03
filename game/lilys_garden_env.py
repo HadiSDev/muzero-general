@@ -50,7 +50,7 @@ class LilysGardenEnv(gym.Env):
         self.valid_actions = [1] * self.action_space.n
 
         self.__dict__.update(kwargs)
-        self.set_simulator(Simulator(host="http://localhost:8090"))
+        self.set_simulator(Simulator(host="http://localhost:25565"))
 
         self.current_actions = []
         self.levels = list(range(111))
@@ -108,8 +108,8 @@ class LilysGardenEnv(gym.Env):
         self.current_progress = new_progress
         self.current_actions.append(action)
 
-        if done:
-            self.set_level(random.choice(self.levels))
+        # if done:
+        #     self.set_level(random.choice(self.levels))
 
         return observation, reward, done, info_dict
 

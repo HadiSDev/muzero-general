@@ -1,18 +1,11 @@
 import datetime
-import json
 import os
-import numpy as np
+import game
 import gym
 import numpy
 import torch
-from scipy.spatial.distance import squareform, pdist
 
 from .abstract_game import AbstractGame
-
-try:
-    import cv2
-except ModuleNotFoundError:
-    raise ModuleNotFoundError('\nPlease run "pip install gym[atari]"')
 
 
 class MuZeroConfig:
@@ -131,7 +124,7 @@ class Game(AbstractGame):
     """
 
     def __init__(self, seed=None):
-        self.env = gym.make('lg-v0', level=1)
+        self.env = gym.make('lg-competition-v0', level=1)
         if seed is not None:
             self.env.seed(seed)
 
@@ -146,10 +139,10 @@ class Game(AbstractGame):
             The new observation, the reward and a boolean if the game has ended.
         """
         observation, reward, done, info_dict = self.env.step(action)
-        observation = numpy.asarray(observation, dtype="float32") / 255.0
+        observation = numpy.asarray(observation, dtype="float32") / 20.0
         observation = numpy.moveaxis(observation, -1, 0)
 
-        return observation, reward, done, info_dict
+        return observation, reward, done
 
     def legal_actions(self):
         """
@@ -165,8 +158,10 @@ class Game(AbstractGame):
         return list(range(117))
 
     def reset(self):
-
-        return self.env.reset()
+        observation = self.env.reset()
+        observation = numpy.asarray(observation, dtype="float32") / 20.0
+        observation = numpy.moveaxis(observation, -1, 0)
+        return observation
 
     def close(self):
         """
