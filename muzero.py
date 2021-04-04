@@ -592,6 +592,7 @@ def load_model_menu(muzero, game_name):
 
 
 if __name__ == "__main__":
+    os.environ["muzero"] = "bash"
     if len(sys.argv) == 2:
         # Train directly with "python muzero.py cartpole"
         muzero = MuZero(sys.argv[1])

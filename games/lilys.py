@@ -1,8 +1,5 @@
 import datetime
 import os
-
-from scipy.spatial.distance import squareform, pdist
-
 import game
 import gym
 import numpy
@@ -30,7 +27,7 @@ class MuZeroConfig:
         self.opponent = None  # Hard coded agent that MuZero faces to assess his progress in multiplayer games. It doesn't influence training. None, "random" or "expert" if implemented in the Game class
 
         ### Self-Play
-        self.num_workers = 10  # Number of simultaneous threads/workers self-playing to feed the replay buffer
+        self.num_workers = 8  # Number of simultaneous threads/workers self-playing to feed the replay buffer
         self.selfplay_on_gpu = False
         self.max_moves = 27000  # Maximum number of moves if game is not finished before
         self.num_simulations = 50  # Number of future moves self-simulated
@@ -74,12 +71,13 @@ class MuZeroConfig:
                                          os.path.basename(__file__)[:-3], datetime.datetime.now().strftime(
                 "%Y-%m-%d--%H-%M-%S"))  # Path to store the model weights and TensorBoard logs
         self.save_model = True  # Save the checkpoint in results_path as model.checkpoint
-        self.training_steps = int(1000e3)  # Total number of training steps (ie weights update according to a batch)
-        self.batch_size = 128  # Number of parts of games to train on at each training step
+        self.training_steps = int(500000)  # Total number of training steps (ie weights update according to a batch)
+        self.batch_size = 256  # Number of parts of games to train on at each training step
         self.checkpoint_interval = int(1e3)  # Number of training steps before using the model for self-playing
         self.value_loss_weight = 0.25  # Scale the value loss to avoid overfitting of the value function, paper recommends 0.25 (See paper appendix Reanalyze)
         self.train_on_gpu = torch.cuda.is_available()  # Train on GPU if available
-
+        if not self.train_on_gpu:
+            print("NO GPU")
         self.optimizer = "SGD"  # "Adam" or "SGD". Paper uses SGD
         self.weight_decay = 1e-4  # L2 weights regularization
         self.momentum = 0.9  # Used only if optimizer is SGD
@@ -90,7 +88,7 @@ class MuZeroConfig:
         self.lr_decay_steps = 350e3
 
         ### Replay Buffer
-        self.replay_buffer_size = int(1e5)  # Number of self-play games to keep in the replay buffer
+        self.replay_buffer_size = int(2e5)  # Number of self-play games to keep in the replay buffer
         self.num_unroll_steps = 5  # Number of game moves to keep for every batch element
         self.td_steps = 10  # Number of steps in the future to take into account for calculating the target value
         self.PER = True  # Prioritized Replay (See paper appendix Training), select in priority the elements in the replay buffer which are unexpected for the network
@@ -131,8 +129,6 @@ class Game(AbstractGame):
         if seed is not None:
             self.env.seed(seed)
 
-        self.current_obs = None
-
     def step(self, action):
         """
         Apply action to the game.
@@ -144,7 +140,6 @@ class Game(AbstractGame):
             The new observation, the reward and a boolean if the game has ended.
         """
         observation, reward, done, info_dict = self.env.step(action)
-        self.current_obs = observation
         observation = numpy.asarray(observation, dtype="float32") / 20.0
         observation = numpy.moveaxis(observation, -1, 0)
 
@@ -161,20 +156,12 @@ class Game(AbstractGame):
         Returns:
             An array of integers, subset of the action space.
         """
-
-        actions = self.create_action_mask(self.current_obs)
-        actions = numpy.asarray(actions, dtype="float32")
-        actions = numpy.where(actions == 1)
-        
-        actions = actions[0].tolist()
-        return actions if actions is not None else list(range(117))
+        return list(range(117))
 
     def reset(self):
         observation = self.env.reset()
-        self.current_obs = observation
         observation = numpy.asarray(observation, dtype="float32") / 20.0
         observation = numpy.moveaxis(observation, -1, 0)
-
         return observation
 
     def close(self):
@@ -189,26 +176,4 @@ class Game(AbstractGame):
         """
         pass
 
-    def create_action_mask(self, observation, flattened=True):  # This is very hard coded at the moment
-
-        if observation is None:
-            return None
-
-        try:
-            matchable_tiles = numpy.zeros((13, 9))
-            for color_idx in range(1, 7):
-                color_locs = numpy.array(list(zip(*numpy.where(observation[:, :, color_idx] > 0))))
-                if not color_locs.size == 0:
-                    has_neighbor = (squareform(pdist(color_locs, metric='cityblock')) == 1).sum(axis=0) > 0
-                    idxs = [(x[0], x[1]) for x in color_locs[has_neighbor]]
-                    for idx in idxs:
-                        matchable_tiles[idx[0]][idx[1]] = 1
-            action_mask_3d = (matchable_tiles * (observation[:, :, 10] > 0) +  # Color * cookie layer
-                              (observation[:, :, 11:15].sum(axis=2) > 0) > 0) * 1  # Booster layers
-            if flattened:
-                return action_mask_3d.flatten('F')
-            else:
-                return action_mask_3d
-        except (KeyError, ValueError, TypeError):
-            return None
 
