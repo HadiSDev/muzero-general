@@ -7,3 +7,4 @@ seaborn
 nevergrad
 torchvision
 torchaudio
+procgen
