@@ -129,8 +129,6 @@ class Game(AbstractGame):
 
     def __init__(self, seed=None):
         self.env = gym.make("procgen:procgen-heist-v0", start_level=0, num_levels=100, render_mode="rgb_array")
-        if seed is not None:
-            self.env.seed(seed)
 
     def step(self, action):
         """
