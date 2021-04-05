@@ -8,3 +8,4 @@ nevergrad
 torchvision
 torchaudio
 procgen
+opencv-python
