@@ -1,19 +1,20 @@
-#PYTHON PART
-FROM python:3.7
+FROM nvidia/cuda:11.1-base
+
+#set up environment
+RUN apt-get update && apt-get install --no-install-recommends --no-install-suggests -y curl
+RUN apt-get update ##[edited]
+RUN apt-get install ffmpeg libsm6 libxext6  -y
+RUN apt-get -y install python3.7
+RUN apt-get -y install python3-pip
+RUN pip3 install --upgrade pip
+COPY requirements.txt /app/requirements.txt
+RUN pip3 install -r /app/requirements.txt -f https://download.pytorch.org/whl/torch_stable.html
 
 # Source code
 COPY . /app
 
-RUN apt-get update && apt-get install -y unzip
+RUN ["chmod", "+x", "/app/muzero.py"]
 
-RUN unzip /app/sim_app.zip -d /app
+VOLUME ["C:\Users\hadis\Documents\docker_vol"]
 
-# clean
-RUN apt-get autoremove -y && apt-get clean && \
-    rm -rf /usr/local/src/*
-
-RUN ["chmod", "+x", "/app/sim_app/linux.x86_64"]
-
-EXPOSE 8090:8080
-
-CMD /app/sim_app/linux.x86_64 & sleep 60
+CMD python3 /app/muzero.py heist
