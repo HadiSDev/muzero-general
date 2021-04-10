@@ -20,6 +20,7 @@ import self_play
 import shared_storage
 import trainer
 
+os.environ["muzero-gpu-job"] = "bash"
 
 class MuZero:
     """
